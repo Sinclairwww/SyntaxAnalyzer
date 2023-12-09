@@ -1,4 +1,4 @@
-#include <algorithm>
+#include <algorithm>    // find
 #include <iostream>
 #include <map>
 #include <string>
@@ -10,7 +10,7 @@ typedef pair< string, vector< string > > Node;
 
 int isStartWith ( string str, string pattern ) { return str.find ( pattern ) == 0; }
 
-class GRAMMAR_TABLE {
+class Gramma_Info {
 public:
     map< string, vector< string > > generative;
     map< string, vector< string > > first;
@@ -18,7 +18,7 @@ public:
     vector< string >                N_set;
     vector< string >                T_set;
     string                          S;
-    GRAMMAR_TABLE () {
+    Gramma_Info () {
         set_generative ( "E", { "TA" } );
         set_generative ( "A", { "+TA", "-TA", "ε" } );
         set_generative ( "T", { "FB" } );
@@ -63,9 +63,10 @@ public:
 
 class SyntaxAnalyzer {
 public:
-    PREDICT_TABLE predict_table;
+    PREDICT_TABLE              predict_table;
+    vector< vector< string > > analyze_table;
 
-    void create_predict_table ( GRAMMAR_TABLE G ) {
+    void create_predict_table ( Gramma_Info G ) {
         // 遍历生成式集合
         for ( auto generative_it = G.generative.begin (); generative_it != G.generative.end (); generative_it++ ) {
             string           left = generative_it->first;
@@ -121,6 +122,7 @@ public:
             string N = *N_it;
             for ( auto T_it = G.T_set.begin (); T_it != G.T_set.end (); T_it++ ) {
                 string T = *T_it;
+                // 使用error填空
                 if ( predict_table.table.find ( N )->second.find ( T ) == predict_table.table.find ( N )->second.end () ) {
                     predict_table.table.find ( N )->second.insert ( pair< string, string > ( T, "error" ) );
                 }
@@ -159,51 +161,69 @@ public:
         }
     }
 
-    vector< vector< string > > predict_analyze ( string input_string ) {
-        vector< vector< string > > analyze_table;
-        int                        ip = 0;
+
+    string generate_stack_str ( const vector< string >& stack ) {
+        string stack_str = "[\"";
+        for ( auto iter = stack.begin (); iter != stack.end (); iter++ ) {
+            stack_str += *iter + "\",\"";
+        }
+        stack_str.erase ( stack_str.length () - 2, 2 );
+        stack_str += "]";
+        return stack_str;
+    }
+
+    bool isInN_set ( string str ) { return find ( predict_table.N_set.begin (), predict_table.N_set.end (), str ) != predict_table.N_set.end (); }
+
+    bool isInT_set ( string str ) { return find ( predict_table.T_set.begin (), predict_table.T_set.end (), str ) != predict_table.T_set.end (); }
+
+    void predict_analyze ( string input_string ) {
+        int ip = 0;
         input_string += "$";
+
         vector< string > stack;
         stack.push_back ( "$" );
         stack.push_back ( predict_table.S );
+
+        // 直到栈中只剩下$
         while ( stack.size () != 1 ) {
-            vector< string > analyze_table_item;
-            analyze_table.push_back ( analyze_table_item );
-            string stack_str = "[\"";
-            for ( auto iter = stack.begin (); iter != stack.end (); iter++ ) {
-                stack_str += *iter + "\",\"";
-            }
-            stack_str.erase ( stack_str.length () - 2, 2 );
-            stack_str += "]";
-            analyze_table.back ().push_back ( stack_str );
-            string input_str = input_string.substr ( ip );
-            analyze_table.back ().push_back ( input_str );
-            string X = stack.back ();
-            if ( find ( predict_table.T_set.begin (), predict_table.T_set.end (), X ) != predict_table.T_set.end () ) {
-                if ( isStartWith ( input_string.substr ( ip ), X ) ) {
-                    ip += X.size ();
+            string stack_str = generate_stack_str ( stack );    // 将栈中的内容转换为["A","B","C"]型的字符串
+            string input_str = input_string.substr ( ip );      // 将输入串中当前位置到末尾的内容转换为字符串
+            analyze_table.push_back ( { stack_str, input_str } );
+
+            string top_item = stack.back ();
+            // 如果栈顶元素是终结符
+            if ( isInT_set ( top_item ) ) {
+                // 如果栈顶元素与输入串中当前位置的内容相同,则将栈顶元素和输入串中当前位置的内容都弹出,并将输入串的位置后移一位
+                if ( isStartWith ( input_string.substr ( ip ), top_item ) ) {
+                    ip += top_item.size ();
                     stack.pop_back ();
                 } else {
-                    error ( "Except2 " + X );
-                    return analyze_table;
+                    error ( "Except2 " + top_item );
+                    return;
                 }
-            } else if ( find ( predict_table.N_set.begin (), predict_table.N_set.end (), X ) != predict_table.N_set.end () ) {
+            }    // 如果栈顶元素是非终结符
+            else if ( isInN_set ( top_item ) ) {
                 string input_string_first;
+                // 如果输入串中当前位置的内容是num,则将input_string_first设置为num
                 if ( input_string[ ip ] == 'n' && input_string[ ip + 1 ] == 'u' && input_string[ ip + 2 ] == 'm' ) {
                     input_string_first = "num";
-                } else {
+                } else {    // 否则将input_string_first设置为输入串中当前位置的内容
                     input_string_first = input_string.substr ( ip, 1 );
                 }
-                if ( predict_table.table.find ( X ) == predict_table.table.end ()
-                     || predict_table.table.find ( X )->second.find ( input_string_first ) == predict_table.table.find ( X )->second.end () ) {
-                    error ( "Except3 " + X );
-                    return analyze_table;
+                // 如果预测分析表中没有栈顶元素和输入串中当前位置的内容对应的生成式,则报错
+                if ( predict_table.table.find ( top_item ) == predict_table.table.end ()
+                     || predict_table.table.find ( top_item )->second.find ( input_string_first ) == predict_table.table.find ( top_item )->second.end () ) {
+                    error ( "Except3 " + top_item );
+                    return;
                 }
-                string Y = predict_table.table.find ( X )->second.find ( input_string_first )->second;
+                // 否则将栈顶元素弹出,并将对应的生成式的右部的每一个字符压入栈中
+                string Y = predict_table.table.find ( top_item )->second.find ( input_string_first )->second;
+                // 如果生成式的右部是error,则报错
                 if ( Y == "error" ) {
-                    error ( "Except4 " + X );
-                    return analyze_table;
-                } else {
+                    error ( "Except4 " + top_item );
+                    return;
+                }    // 否则将生成式的右部的每一个字符压入栈中
+                else {
                     stack.pop_back ();
                     if ( Y != "ε" ) {
                         for ( auto iter = Y.rbegin (); iter != Y.rend (); iter++ ) {
@@ -216,14 +236,14 @@ public:
                             }
                             stack.push_back ( first );
                         }
-                        analyze_table.back ().push_back ( X + "->" + Y );
+                        analyze_table.back ().push_back ( top_item + "->" + Y );
                     } else {
-                        analyze_table.back ().push_back ( X + "-><epsilon>" );
+                        analyze_table.back ().push_back ( top_item + "-><epsilon>" );
                     }
                 }
             } else {
-                error ( "Except5 " + X );
-                return analyze_table;
+                error ( "Except5 " + top_item );
+                return;
             }
         }
         if ( input_string[ ip ] == '$' ) {
@@ -235,10 +255,10 @@ public:
         } else {
             error ( "Except6 $" );
         }
-        return analyze_table;
+        return;
     }
 
-    void print_analyze_table ( vector< vector< string > > analyze_table ) {
+    void print_analyze_table () {
         cout << "vector< vector< string > >:" << endl;
         for ( auto iter = analyze_table.begin (); iter != analyze_table.end (); iter++ ) {
             vector< string > analyze_table_item = *iter;
@@ -283,14 +303,13 @@ string input () {
 
 int main () {
     SyntaxAnalyzer analyser;
-    GRAMMAR_TABLE  G;
+    Gramma_Info    G;
     analyser.create_predict_table ( G );
     analyser.print_predict_table ();
 
     string input_string = processString ( input () );
+    analyser.predict_analyze ( input_string );
+    analyser.print_analyze_table ();
 
-    vector< vector< string > > analyse_table = analyser.predict_analyze ( input_string );
-    analyser.print_analyze_table ( analyse_table );
-    system ( "pause" );
     return 0;
 }
