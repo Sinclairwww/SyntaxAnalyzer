@@ -8,15 +8,15 @@
 using namespace std;
 typedef pair< string, vector< string > > Node;
 
-int startWith ( string str, string pattern ) { return str.find ( pattern ) == 0 ? 1 : 0; }
+int isStartWith ( string str, string pattern ) { return str.find ( pattern ) == 0; }
 
 class GRAMMAR_TABLE {
 public:
     map< string, vector< string > > generative;
     map< string, vector< string > > first;
     map< string, vector< string > > follow;
-    vector< string >                N;
-    vector< string >                T;
+    vector< string >                N_set;
+    vector< string >                T_set;
     string                          S;
     GRAMMAR_TABLE () {
         set_generative ( "E", { "TA" } );
@@ -25,8 +25,8 @@ public:
         set_generative ( "B", { "*FB", "/FB", "ε" } );
         set_generative ( "F", { "(E)", "num" } );
 
-        N = { "E", "A", "T", "B", "F" };
-        T = { "+", "-", "*", "/", "(", ")", "num", "$" };
+        N_set = { "E", "A", "T", "B", "F" };
+        T_set = { "+", "-", "*", "/", "(", ")", "num", "$" };
         S = "E";
 
         set_first ( "E", { "(", "num" } );
@@ -49,8 +49,8 @@ public:
 class PREDICT_TABLE {
 public:
     map< string, map< string, string > > table;
-    vector< string >                     N;
-    vector< string >                     T;
+    vector< string >                     N_set;
+    vector< string >                     T_set;
     string                               S;
     PREDICT_TABLE () {
         table.insert ( pair< string, map< string, string > > ( "E", map< string, string > () ) );
@@ -66,65 +66,68 @@ public:
     PREDICT_TABLE predict_table;
 
     void create_predict_table ( GRAMMAR_TABLE G ) {
-        for ( auto iter = G.generative.begin (); iter != G.generative.end (); iter++ ) {
-            string           left = iter->first;
-            vector< string > right_vec = iter->second;
+        // 遍历生成式集合
+        for ( auto generative_it = G.generative.begin (); generative_it != G.generative.end (); generative_it++ ) {
+            string           left = generative_it->first;
+            vector< string > right_vec = generative_it->second;
             // 遍历生成式的右部
-            for ( auto iter2 = right_vec.begin (); iter2 != right_vec.end (); iter2++ ) {
-                string right = *iter2;
+            for ( auto right_it = right_vec.begin (); right_it != right_vec.end (); right_it++ ) {
+                string right = *right_it;
                 // 如果右部的第一个字符是非终结符
                 if ( right[ 0 ] >= 'A' && right[ 0 ] <= 'Z' ) {
                     string           N = string ( 1, right[ 0 ] );              // 取出该非终结符
                     vector< string > first_set = G.first.find ( N )->second;    // 取出对应first集
-                    for ( auto a = first_set.begin (); a != first_set.end (); a++ ) {
-                        if ( *a != "ε" ) {
-                            // 将该非终结符的first集中的每一个终结符加入到预测分析表中
-                            predict_table.table.find ( left )->second.insert ( pair< string, string > ( *a, right ) );
+                    // 将该非终结符的first集中的每一个终结符加入到预测分析表中
+                    for ( auto it_first = first_set.begin (); it_first != first_set.end (); it_first++ ) {
+                        if ( *it_first != "ε" ) {
+                            predict_table.table.find ( left )->second.insert ( pair< string, string > ( *it_first, right ) );
                         }
                     }
+                    // 如果该非终结符的first集中包含ε，则将该非终结符的follow集中的每一个终结符加入到预测分析表中
                     if ( find ( first_set.begin (), first_set.end (), "ε" ) != first_set.end () ) {
-                        vector< string > follow_vector = G.follow.find ( left )->second;
-                        for ( auto b = follow_vector.begin (); b != follow_vector.end (); b++ ) {
-                            if ( *b != "ε" ) {
-                                predict_table.table.find ( left )->second.insert ( pair< string, string > ( *b, right ) );
+                        vector< string > follow_set = G.follow.find ( left )->second;
+                        for ( auto follow_it = follow_set.begin (); follow_it != follow_set.end (); follow_it++ ) {
+                            if ( *follow_it != "ε" ) {
+                                predict_table.table.find ( left )->second.insert ( pair< string, string > ( *follow_it, right ) );
                             }
                         }
                     }
                 }    // 如果右部的第一个字符是终结符
                 else {
                     string alpha_first;
-                    if ( startWith ( right, "num" ) ) {
+                    if ( isStartWith ( right, "num" ) ) {
                         alpha_first = "num";
-                    } else if ( startWith ( right, "ε" ) ) {
+                    } else if ( isStartWith ( right, "ε" ) ) {
                         alpha_first = "ε";
                     } else {
                         alpha_first = right[ 0 ];
                     }
                     if ( alpha_first != "ε" ) {
                         predict_table.table.find ( left )->second.insert ( pair< string, string > ( alpha_first, right ) );
-                    }
-                    if ( alpha_first == "ε" ) {
-                        vector< string > follow_vector = G.follow.find ( left )->second;
-                        for ( auto b = follow_vector.begin (); b != follow_vector.end (); b++ ) {
-                            if ( *b != "ε" ) {
-                                predict_table.table.find ( left )->second.insert ( pair< string, string > ( *b, right ) );
+                    } else {
+                        // 如果该非终结符的first集中包含ε，则将该非终结符的follow集中的每一个终结符加入到预测分析表中
+                        vector< string > follow_set = G.follow.find ( left )->second;
+                        for ( auto follow_it = follow_set.begin (); follow_it != follow_set.end (); follow_it++ ) {
+                            if ( *follow_it != "ε" ) {
+                                predict_table.table.find ( left )->second.insert ( pair< string, string > ( *follow_it, right ) );
                             }
                         }
                     }
                 }
             }
         }
-        for ( auto iter = G.N.begin (); iter != G.N.end (); iter++ ) {
-            string A = *iter;
-            for ( auto iter2 = G.T.begin (); iter2 != G.T.end (); iter2++ ) {
-                string a = *iter2;
-                if ( predict_table.table.find ( A )->second.find ( a ) == predict_table.table.find ( A )->second.end () ) {
-                    predict_table.table.find ( A )->second.insert ( pair< string, string > ( a, "error" ) );
+
+        for ( auto N_it = G.N_set.begin (); N_it != G.N_set.end (); N_it++ ) {
+            string N = *N_it;
+            for ( auto T_it = G.T_set.begin (); T_it != G.T_set.end (); T_it++ ) {
+                string T = *T_it;
+                if ( predict_table.table.find ( N )->second.find ( T ) == predict_table.table.find ( N )->second.end () ) {
+                    predict_table.table.find ( N )->second.insert ( pair< string, string > ( T, "error" ) );
                 }
             }
         }
-        predict_table.N = G.N;
-        predict_table.T = G.T;
+        predict_table.N_set = G.N_set;
+        predict_table.T_set = G.T_set;
         predict_table.S = G.S;
     }
 
@@ -176,15 +179,15 @@ public:
             string input_str = input_string.substr ( ip );
             analyze_table.back ().push_back ( input_str );
             string X = stack.back ();
-            if ( find ( predict_table.T.begin (), predict_table.T.end (), X ) != predict_table.T.end () ) {
-                if ( startWith ( input_string.substr ( ip ), X ) ) {
+            if ( find ( predict_table.T_set.begin (), predict_table.T_set.end (), X ) != predict_table.T_set.end () ) {
+                if ( isStartWith ( input_string.substr ( ip ), X ) ) {
                     ip += X.size ();
                     stack.pop_back ();
                 } else {
                     error ( "Except2 " + X );
                     return analyze_table;
                 }
-            } else if ( find ( predict_table.N.begin (), predict_table.N.end (), X ) != predict_table.N.end () ) {
+            } else if ( find ( predict_table.N_set.begin (), predict_table.N_set.end (), X ) != predict_table.N_set.end () ) {
                 string input_string_first;
                 if ( input_string[ ip ] == 'n' && input_string[ ip + 1 ] == 'u' && input_string[ ip + 2 ] == 'm' ) {
                     input_string_first = "num";
