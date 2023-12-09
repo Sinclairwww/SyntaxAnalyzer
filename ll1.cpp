@@ -11,9 +11,15 @@ using namespace std;
 class GRAMMAR_TABLE {
 public:
     map< string, vector< string > > generative;
+    map< string, vector< string > > first;
+    map< string, vector< string > > follow;
     vector< string >                N;
     vector< string >                T;
     string                          S;
+
+    void set_generative ( string left, vector< string > rights ) { generative.insert ( pair< string, vector< string > > ( left, rights ) ); };
+    void set_first ( string left, vector< string > rights ) { first.insert ( pair< string, vector< string > > ( left, rights ) ); };
+    void set_follow ( string left, vector< string > rights ) { follow.insert ( pair< string, vector< string > > ( left, rights ) ); };
 };
 
 class PREDICT_TABLE {
@@ -26,7 +32,7 @@ public:
 
 class SyntaxAnalyzer {
 public:
-    PREDICT_TABLE              create_predict_table ( GRAMMAR_TABLE G, map< string, vector< string > > first_table, map< string, vector< string > > follow_table );
+    PREDICT_TABLE              create_predict_table ( GRAMMAR_TABLE G );
     void                       print_predict_table ( PREDICT_TABLE predict_table );
     vector< vector< string > > predict_analyze ( string input_string, PREDICT_TABLE M );
     void                       print_analyze_table ( vector< vector< string > > analyze_table );
@@ -36,62 +42,50 @@ public:
 
 int startWith ( string str, string pattern ) { return str.find ( pattern ) == 0 ? 1 : 0; }
 
-void init ( GRAMMAR_TABLE& G, map< string, vector< string > >& first_table, map< string, vector< string > >& follow_table ) {
-    vector< string > E_vector = { "TG" };
-    G.generative.insert ( pair< string, vector< string > > ( "E", E_vector ) );
-    vector< string > G_vector = { "+TG", "-TG", "ε" };
-    G.generative.insert ( pair< string, vector< string > > ( "G", G_vector ) );
-    vector< string > T_vector = { "FU" };
-    G.generative.insert ( pair< string, vector< string > > ( "T", T_vector ) );
-    vector< string > U_vector = { "*FU", "/FU", "ε" };
-    G.generative.insert ( pair< string, vector< string > > ( "U", U_vector ) );
-    vector< string > F_vector = { "(E)", "num" };
-    G.generative.insert ( pair< string, vector< string > > ( "F", F_vector ) );
-    G.N = { "E", "G", "T", "U", "F" };
+void init ( GRAMMAR_TABLE& G ) {
+    G.set_generative ( "E", { "TA" } );
+    G.set_generative ( "A", { "+TA", "-TA", "ε" } );
+    G.set_generative ( "T", { "FB" } );
+    G.set_generative ( "B", { "*FB", "/FB", "ε" } );
+    G.set_generative ( "F", { "(E)", "num" } );
+
+    G.N = { "E", "A", "T", "B", "F" };
     G.T = { "+", "-", "*", "/", "(", ")", "num", "$" };
     G.S = "E";
-    vector< string > E_first_vector = { "(", "num" };
-    first_table.insert ( pair< string, vector< string > > ( "E", E_first_vector ) );
-    vector< string > G_first_vector = { "+", "-", "ε" };
-    first_table.insert ( pair< string, vector< string > > ( "G", G_first_vector ) );
-    vector< string > T_first_vector = { "(", "num" };
-    first_table.insert ( pair< string, vector< string > > ( "T", T_first_vector ) );
-    vector< string > U_first_vector = { "*", "/", "ε" };
-    first_table.insert ( pair< string, vector< string > > ( "U", U_first_vector ) );
-    vector< string > F_first_vector = { "(", "num" };
-    first_table.insert ( pair< string, vector< string > > ( "F", F_first_vector ) );
-    vector< string > E_follow_vector = { "$", ")" };
-    follow_table.insert ( pair< string, vector< string > > ( "E", E_follow_vector ) );
-    vector< string > G_follow_vector = { "$", ")" };
-    follow_table.insert ( pair< string, vector< string > > ( "G", G_follow_vector ) );
-    vector< string > T_follow_vector = { "+", "-", "$", ")" };
-    follow_table.insert ( pair< string, vector< string > > ( "T", T_follow_vector ) );
-    vector< string > U_follow_vector = { "+", "-", "$", ")" };
-    follow_table.insert ( pair< string, vector< string > > ( "U", U_follow_vector ) );
-    vector< string > F_follow_vector = { "*", "/", "+", "-", "$", ")" };
-    follow_table.insert ( pair< string, vector< string > > ( "F", F_follow_vector ) );
+
+    G.set_first ( "E", { "(", "num" } );
+    G.set_first ( "A", { "+", "-", "ε" } );
+    G.set_first ( "T", { "(", "num" } );
+    G.set_first ( "B", { "*", "/", "ε" } );
+    G.set_first ( "F", { "(", "num" } );
+
+    G.set_follow ( "E", { "$", ")" } );
+    G.set_follow ( "A", { "$", ")" } );
+    G.set_follow ( "T", { "+", "-", "$", ")" } );
+    G.set_follow ( "B", { "+", "-", "$", ")" } );
+    G.set_follow ( "F", { "*", "/", "+", "-", "$", ")" } );
 }
 
-PREDICT_TABLE SyntaxAnalyzer::create_predict_table ( GRAMMAR_TABLE G, map< string, vector< string > > first_table, map< string, vector< string > > follow_table ) {
+PREDICT_TABLE SyntaxAnalyzer::create_predict_table ( GRAMMAR_TABLE G ) {
     PREDICT_TABLE M;
     M.table.insert ( pair< string, map< string, string > > ( "E", map< string, string > () ) );
-    M.table.insert ( pair< string, map< string, string > > ( "G", map< string, string > () ) );
+    M.table.insert ( pair< string, map< string, string > > ( "A", map< string, string > () ) );
     M.table.insert ( pair< string, map< string, string > > ( "T", map< string, string > () ) );
-    M.table.insert ( pair< string, map< string, string > > ( "U", map< string, string > () ) );
+    M.table.insert ( pair< string, map< string, string > > ( "B", map< string, string > () ) );
     M.table.insert ( pair< string, map< string, string > > ( "F", map< string, string > () ) );
     for ( auto iter = G.generative.begin (); iter != G.generative.end (); iter++ ) {
         string A = iter->first;
         for ( auto iter2 = iter->second.begin (); iter2 != iter->second.end (); iter2++ ) {
             string alpha = *iter2;
             if ( alpha[ 0 ] >= 'A' && alpha[ 0 ] <= 'Z' ) {
-                vector< string > first_vector = first_table.find ( string ( 1, alpha[ 0 ] ) )->second;
+                vector< string > first_vector = G.first.find ( string ( 1, alpha[ 0 ] ) )->second;
                 for ( auto a = first_vector.begin (); a != first_vector.end (); a++ ) {
                     if ( *a != "ε" ) {
                         M.table.find ( A )->second.insert ( pair< string, string > ( *a, alpha ) );
                     }
                 }
                 if ( find ( first_vector.begin (), first_vector.end (), "ε" ) != first_vector.end () ) {
-                    vector< string > follow_vector = follow_table.find ( A )->second;
+                    vector< string > follow_vector = G.follow.find ( A )->second;
                     for ( auto b = follow_vector.begin (); b != follow_vector.end (); b++ ) {
                         if ( *b != "ε" ) {
                             M.table.find ( A )->second.insert ( pair< string, string > ( *b, alpha ) );
@@ -111,7 +105,7 @@ PREDICT_TABLE SyntaxAnalyzer::create_predict_table ( GRAMMAR_TABLE G, map< strin
                     M.table.find ( A )->second.insert ( pair< string, string > ( alpha_first, alpha ) );
                 }
                 if ( alpha_first == "ε" ) {
-                    vector< string > follow_vector = follow_table.find ( A )->second;
+                    vector< string > follow_vector = G.follow.find ( A )->second;
                     for ( auto b = follow_vector.begin (); b != follow_vector.end (); b++ ) {
                         if ( *b != "ε" ) {
                             M.table.find ( A )->second.insert ( pair< string, string > ( *b, alpha ) );
@@ -281,12 +275,10 @@ string process ( string str ) {
 }
 
 int main () {
-    SyntaxAnalyzer                  sa;
-    GRAMMAR_TABLE                   G;
-    map< string, vector< string > > first_table;
-    map< string, vector< string > > follow_table;
-    init ( G, first_table, follow_table );
-    PREDICT_TABLE M = sa.create_predict_table ( G, first_table, follow_table );
+    SyntaxAnalyzer sa;
+    GRAMMAR_TABLE  G;
+    init ( G );
+    PREDICT_TABLE M = sa.create_predict_table ( G );
     sa.print_predict_table ( M );
     cout << "Please input string:" << endl;
     string input_string;
