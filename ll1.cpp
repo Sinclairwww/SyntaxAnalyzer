@@ -7,40 +7,36 @@
 
 using namespace std;
 
-typedef map< string, vector< string > > FIRST_TABLE;
-typedef map< string, vector< string > > FOLLOW_TABLE;
-typedef vector< vector< string > >      ANALYZE_TABLE;
 
 class GRAMMAR_TABLE {
 public:
     map< string, vector< string > > generative;
-    vector< string >                non_terminals;
-    vector< string >                terminals;
-    string                          start_symbol;
+    vector< string >                N;
+    vector< string >                T;
+    string                          S;
 };
 
 class PREDICT_TABLE {
 public:
     map< string, map< string, string > > table;
-    vector< string >                     non_terminals;
-    vector< string >                     terminals;
-    string                               start_symbol;
+    vector< string >                     N;
+    vector< string >                     T;
+    string                               S;
 };
 
 class SyntaxAnalyzer {
 public:
-    PREDICT_TABLE create_predict_table ( GRAMMAR_TABLE G, FIRST_TABLE first_table, FOLLOW_TABLE follow_table );
-    void          print_predict_table ( PREDICT_TABLE predict_table );
-    ANALYZE_TABLE predict_analyze ( string input_string, PREDICT_TABLE M );
-    void          print_analyze_table ( ANALYZE_TABLE analyze_table );
-    void          error ( string error_string ) { cout << error_string << endl; };
+    PREDICT_TABLE              create_predict_table ( GRAMMAR_TABLE G, map< string, vector< string > > first_table, map< string, vector< string > > follow_table );
+    void                       print_predict_table ( PREDICT_TABLE predict_table );
+    vector< vector< string > > predict_analyze ( string input_string, PREDICT_TABLE M );
+    void                       print_analyze_table ( vector< vector< string > > analyze_table );
+    void                       error ( string error_string ) { cout << error_string << endl; };
 };
 
-void init ( GRAMMAR_TABLE& G, FIRST_TABLE& first_table, FOLLOW_TABLE& follow_table );
 
 int startWith ( string str, string pattern ) { return str.find ( pattern ) == 0 ? 1 : 0; }
 
-void init ( GRAMMAR_TABLE& G, FIRST_TABLE& first_table, FOLLOW_TABLE& follow_table ) {
+void init ( GRAMMAR_TABLE& G, map< string, vector< string > >& first_table, map< string, vector< string > >& follow_table ) {
     vector< string > E_vector = { "TG" };
     G.generative.insert ( pair< string, vector< string > > ( "E", E_vector ) );
     vector< string > G_vector = { "+TG", "-TG", "ε" };
@@ -51,9 +47,9 @@ void init ( GRAMMAR_TABLE& G, FIRST_TABLE& first_table, FOLLOW_TABLE& follow_tab
     G.generative.insert ( pair< string, vector< string > > ( "U", U_vector ) );
     vector< string > F_vector = { "(E)", "num" };
     G.generative.insert ( pair< string, vector< string > > ( "F", F_vector ) );
-    G.non_terminals = { "E", "G", "T", "U", "F" };
-    G.terminals = { "+", "-", "*", "/", "(", ")", "num", "$" };
-    G.start_symbol = "E";
+    G.N = { "E", "G", "T", "U", "F" };
+    G.T = { "+", "-", "*", "/", "(", ")", "num", "$" };
+    G.S = "E";
     vector< string > E_first_vector = { "(", "num" };
     first_table.insert ( pair< string, vector< string > > ( "E", E_first_vector ) );
     vector< string > G_first_vector = { "+", "-", "ε" };
@@ -76,7 +72,7 @@ void init ( GRAMMAR_TABLE& G, FIRST_TABLE& first_table, FOLLOW_TABLE& follow_tab
     follow_table.insert ( pair< string, vector< string > > ( "F", F_follow_vector ) );
 }
 
-PREDICT_TABLE SyntaxAnalyzer::create_predict_table ( GRAMMAR_TABLE G, FIRST_TABLE first_table, FOLLOW_TABLE follow_table ) {
+PREDICT_TABLE SyntaxAnalyzer::create_predict_table ( GRAMMAR_TABLE G, map< string, vector< string > > first_table, map< string, vector< string > > follow_table ) {
     PREDICT_TABLE M;
     M.table.insert ( pair< string, map< string, string > > ( "E", map< string, string > () ) );
     M.table.insert ( pair< string, map< string, string > > ( "G", map< string, string > () ) );
@@ -125,18 +121,18 @@ PREDICT_TABLE SyntaxAnalyzer::create_predict_table ( GRAMMAR_TABLE G, FIRST_TABL
             }
         }
     }
-    for ( auto iter = G.non_terminals.begin (); iter != G.non_terminals.end (); iter++ ) {
+    for ( auto iter = G.N.begin (); iter != G.N.end (); iter++ ) {
         string A = *iter;
-        for ( auto iter2 = G.terminals.begin (); iter2 != G.terminals.end (); iter2++ ) {
+        for ( auto iter2 = G.T.begin (); iter2 != G.T.end (); iter2++ ) {
             string a = *iter2;
             if ( M.table.find ( A )->second.find ( a ) == M.table.find ( A )->second.end () ) {
                 M.table.find ( A )->second.insert ( pair< string, string > ( a, "error" ) );
             }
         }
     }
-    M.non_terminals = G.non_terminals;
-    M.terminals = G.terminals;
-    M.start_symbol = G.start_symbol;
+    M.N = G.N;
+    M.T = G.T;
+    M.S = G.S;
     return M;
 }
 
@@ -168,13 +164,13 @@ void SyntaxAnalyzer::print_predict_table ( PREDICT_TABLE M ) {
     }
 }
 
-ANALYZE_TABLE SyntaxAnalyzer::predict_analyze ( string input_string, PREDICT_TABLE M ) {
-    ANALYZE_TABLE analyze_table;
-    int           ip = 0;
+vector< vector< string > > SyntaxAnalyzer::predict_analyze ( string input_string, PREDICT_TABLE M ) {
+    vector< vector< string > > analyze_table;
+    int                        ip = 0;
     input_string += "$";
     vector< string > stack;
     stack.push_back ( "$" );
-    stack.push_back ( M.start_symbol );
+    stack.push_back ( M.S );
     while ( stack.size () != 1 ) {
         vector< string > analyze_table_item;
         analyze_table.push_back ( analyze_table_item );
@@ -188,7 +184,7 @@ ANALYZE_TABLE SyntaxAnalyzer::predict_analyze ( string input_string, PREDICT_TAB
         string input_str = input_string.substr ( ip );
         analyze_table.back ().push_back ( input_str );
         string X = stack.back ();
-        if ( find ( M.terminals.begin (), M.terminals.end (), X ) != M.terminals.end () ) {
+        if ( find ( M.T.begin (), M.T.end (), X ) != M.T.end () ) {
             if ( startWith ( input_string.substr ( ip ), X ) ) {
                 ip += X.size ();
                 stack.pop_back ();
@@ -196,7 +192,7 @@ ANALYZE_TABLE SyntaxAnalyzer::predict_analyze ( string input_string, PREDICT_TAB
                 error ( "Except2 " + X );
                 return analyze_table;
             }
-        } else if ( find ( M.non_terminals.begin (), M.non_terminals.end (), X ) != M.non_terminals.end () ) {
+        } else if ( find ( M.N.begin (), M.N.end (), X ) != M.N.end () ) {
             string input_string_first;
             if ( input_string[ ip ] == 'n' && input_string[ ip + 1 ] == 'u' && input_string[ ip + 2 ] == 'm' ) {
                 input_string_first = "num";
@@ -246,8 +242,8 @@ ANALYZE_TABLE SyntaxAnalyzer::predict_analyze ( string input_string, PREDICT_TAB
     return analyze_table;
 }
 
-void SyntaxAnalyzer::print_analyze_table ( ANALYZE_TABLE analyze_table ) {
-    cout << "ANALYZE_TABLE:" << endl;
+void SyntaxAnalyzer::print_analyze_table ( vector< vector< string > > analyze_table ) {
+    cout << "vector< vector< string > >:" << endl;
     for ( auto iter = analyze_table.begin (); iter != analyze_table.end (); iter++ ) {
         vector< string > analyze_table_item = *iter;
         for ( auto iter2 = analyze_table_item.begin (); iter2 != analyze_table_item.end (); iter2++ ) {
@@ -285,10 +281,10 @@ string process ( string str ) {
 }
 
 int main () {
-    SyntaxAnalyzer sa;
-    GRAMMAR_TABLE  G;
-    FIRST_TABLE    first_table;
-    FOLLOW_TABLE   follow_table;
+    SyntaxAnalyzer                  sa;
+    GRAMMAR_TABLE                   G;
+    map< string, vector< string > > first_table;
+    map< string, vector< string > > follow_table;
     init ( G, first_table, follow_table );
     PREDICT_TABLE M = sa.create_predict_table ( G, first_table, follow_table );
     sa.print_predict_table ( M );
@@ -296,7 +292,7 @@ int main () {
     string input_string;
     cin >> input_string;
     input_string = process ( input_string );
-    ANALYZE_TABLE at = sa.predict_analyze ( input_string, M );
+    vector< vector< string > > at = sa.predict_analyze ( input_string, M );
     sa.print_analyze_table ( at );
     system ( "pause" );
     return 0;
