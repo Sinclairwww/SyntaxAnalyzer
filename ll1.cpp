@@ -6,7 +6,9 @@
 
 
 using namespace std;
+typedef pair< string, vector< string > > Node;
 
+int startWith ( string str, string pattern ) { return str.find ( pattern ) == 0 ? 1 : 0; }
 
 class GRAMMAR_TABLE {
 public:
@@ -39,9 +41,9 @@ public:
         set_follow ( "B", { "+", "-", "$", ")" } );
         set_follow ( "F", { "*", "/", "+", "-", "$", ")" } );
     };
-    void set_generative ( string left, vector< string > rights ) { generative.insert ( pair< string, vector< string > > ( left, rights ) ); };
-    void set_first ( string left, vector< string > rights ) { first.insert ( pair< string, vector< string > > ( left, rights ) ); };
-    void set_follow ( string left, vector< string > rights ) { follow.insert ( pair< string, vector< string > > ( left, rights ) ); };
+    void set_generative ( string left, vector< string > rights ) { generative.insert ( Node ( left, rights ) ); };
+    void set_first ( string left, vector< string > rights ) { first.insert ( Node ( left, rights ) ); };
+    void set_follow ( string left, vector< string > rights ) { follow.insert ( Node ( left, rights ) ); };
 };
 
 class PREDICT_TABLE {
@@ -50,54 +52,62 @@ public:
     vector< string >                     N;
     vector< string >                     T;
     string                               S;
+    PREDICT_TABLE () {
+        table.insert ( pair< string, map< string, string > > ( "E", map< string, string > () ) );
+        table.insert ( pair< string, map< string, string > > ( "A", map< string, string > () ) );
+        table.insert ( pair< string, map< string, string > > ( "T", map< string, string > () ) );
+        table.insert ( pair< string, map< string, string > > ( "B", map< string, string > () ) );
+        table.insert ( pair< string, map< string, string > > ( "F", map< string, string > () ) );
+    };
 };
 
 class SyntaxAnalyzer {
 public:
     PREDICT_TABLE predict_table;
-    PREDICT_TABLE SyntaxAnalyzer::create_predict_table ( GRAMMAR_TABLE G ) {
-        PREDICT_TABLE predict_table;
-        predict_table.table.insert ( pair< string, map< string, string > > ( "E", map< string, string > () ) );
-        predict_table.table.insert ( pair< string, map< string, string > > ( "A", map< string, string > () ) );
-        predict_table.table.insert ( pair< string, map< string, string > > ( "T", map< string, string > () ) );
-        predict_table.table.insert ( pair< string, map< string, string > > ( "B", map< string, string > () ) );
-        predict_table.table.insert ( pair< string, map< string, string > > ( "F", map< string, string > () ) );
+
+    void create_predict_table ( GRAMMAR_TABLE G ) {
         for ( auto iter = G.generative.begin (); iter != G.generative.end (); iter++ ) {
-            string A = iter->first;
-            for ( auto iter2 = iter->second.begin (); iter2 != iter->second.end (); iter2++ ) {
-                string alpha = *iter2;
-                if ( alpha[ 0 ] >= 'A' && alpha[ 0 ] <= 'Z' ) {
-                    vector< string > first_vector = G.first.find ( string ( 1, alpha[ 0 ] ) )->second;
-                    for ( auto a = first_vector.begin (); a != first_vector.end (); a++ ) {
+            string           left = iter->first;
+            vector< string > right_vec = iter->second;
+            // 遍历生成式的右部
+            for ( auto iter2 = right_vec.begin (); iter2 != right_vec.end (); iter2++ ) {
+                string right = *iter2;
+                // 如果右部的第一个字符是非终结符
+                if ( right[ 0 ] >= 'A' && right[ 0 ] <= 'Z' ) {
+                    string           N = string ( 1, right[ 0 ] );              // 取出该非终结符
+                    vector< string > first_set = G.first.find ( N )->second;    // 取出对应first集
+                    for ( auto a = first_set.begin (); a != first_set.end (); a++ ) {
                         if ( *a != "ε" ) {
-                            predict_table.table.find ( A )->second.insert ( pair< string, string > ( *a, alpha ) );
+                            // 将该非终结符的first集中的每一个终结符加入到预测分析表中
+                            predict_table.table.find ( left )->second.insert ( pair< string, string > ( *a, right ) );
                         }
                     }
-                    if ( find ( first_vector.begin (), first_vector.end (), "ε" ) != first_vector.end () ) {
-                        vector< string > follow_vector = G.follow.find ( A )->second;
+                    if ( find ( first_set.begin (), first_set.end (), "ε" ) != first_set.end () ) {
+                        vector< string > follow_vector = G.follow.find ( left )->second;
                         for ( auto b = follow_vector.begin (); b != follow_vector.end (); b++ ) {
                             if ( *b != "ε" ) {
-                                predict_table.table.find ( A )->second.insert ( pair< string, string > ( *b, alpha ) );
+                                predict_table.table.find ( left )->second.insert ( pair< string, string > ( *b, right ) );
                             }
                         }
                     }
-                } else {
+                }    // 如果右部的第一个字符是终结符
+                else {
                     string alpha_first;
-                    if ( startWith ( alpha, "num" ) ) {
+                    if ( startWith ( right, "num" ) ) {
                         alpha_first = "num";
-                    } else if ( startWith ( alpha, "ε" ) ) {
+                    } else if ( startWith ( right, "ε" ) ) {
                         alpha_first = "ε";
                     } else {
-                        alpha_first = alpha[ 0 ];
+                        alpha_first = right[ 0 ];
                     }
                     if ( alpha_first != "ε" ) {
-                        predict_table.table.find ( A )->second.insert ( pair< string, string > ( alpha_first, alpha ) );
+                        predict_table.table.find ( left )->second.insert ( pair< string, string > ( alpha_first, right ) );
                     }
                     if ( alpha_first == "ε" ) {
-                        vector< string > follow_vector = G.follow.find ( A )->second;
+                        vector< string > follow_vector = G.follow.find ( left )->second;
                         for ( auto b = follow_vector.begin (); b != follow_vector.end (); b++ ) {
                             if ( *b != "ε" ) {
-                                predict_table.table.find ( A )->second.insert ( pair< string, string > ( *b, alpha ) );
+                                predict_table.table.find ( left )->second.insert ( pair< string, string > ( *b, right ) );
                             }
                         }
                     }
@@ -116,10 +126,9 @@ public:
         predict_table.N = G.N;
         predict_table.T = G.T;
         predict_table.S = G.S;
-        return predict_table;
     }
 
-    void SyntaxAnalyzer::print_predict_table () {
+    void print_predict_table () {
         cout << "PREDICT_TABLE:" << endl;
         cout << "\t";
         for ( auto iter : predict_table.table.begin ()->second ) {
@@ -146,7 +155,8 @@ public:
             cout << endl;
         }
     }
-    vector< vector< string > > SyntaxAnalyzer::predict_analyze ( string input_string ) {
+
+    vector< vector< string > > predict_analyze ( string input_string ) {
         vector< vector< string > > analyze_table;
         int                        ip = 0;
         input_string += "$";
@@ -224,7 +234,8 @@ public:
         }
         return analyze_table;
     }
-    void SyntaxAnalyzer::print_analyze_table ( vector< vector< string > > analyze_table ) {
+
+    void print_analyze_table ( vector< vector< string > > analyze_table ) {
         cout << "vector< vector< string > >:" << endl;
         for ( auto iter = analyze_table.begin (); iter != analyze_table.end (); iter++ ) {
             vector< string > analyze_table_item = *iter;
@@ -243,29 +254,21 @@ public:
             cout << endl;
         }
     }
+
     void error ( string error_string ) { cout << error_string << endl; };
 };
 
-
-int startWith ( string str, string pattern ) { return str.find ( pattern ) == 0 ? 1 : 0; }
-
-
-string process ( string str ) {
-    string newStr;
-    int    isNum = 0;
-    for ( int i = 0; i < str.size (); i++ ) {
-        if ( ( str[ i ] >= '0' && str[ i ] <= '9' ) || str[ i ] == '.' ) {
-            if ( !isNum ) {
-                isNum = 1;
-                newStr += "num";
-            }
-            continue;
+// 将输入字符串中的所有连续的数字（包括小数）替换为字符串 "num"
+string processString ( string inputString ) {
+    string newString;
+    for ( int i = 0; i < inputString.size (); i++ ) {
+        if ( isdigit ( inputString[ i ] ) || inputString[ i ] == '.' ) {
+            newString += "num";
         } else {
-            isNum = 0;
-            newStr += str[ i ];
+            newString += inputString[ i ];
         }
     }
-    return newStr;
+    return newString;
 }
 
 string input () {
@@ -281,7 +284,7 @@ int main () {
     analyser.create_predict_table ( G );
     analyser.print_predict_table ();
 
-    string input_string = process ( input () );
+    string input_string = processString ( input () );
 
     vector< vector< string > > analyse_table = analyser.predict_analyze ( input_string );
     analyser.print_analyze_table ( analyse_table );
