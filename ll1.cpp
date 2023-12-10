@@ -8,18 +8,18 @@
 using namespace std;
 typedef pair< string, vector< string > > Node;
 
-map< map< string, string >, int > generative_index{};
-void                              initIndex () {
-    generative_index.insert ( { { { "E", "TA" } }, 1 } );
-    generative_index.insert ( { { { "A", "+TA" } }, 2 } );
-    generative_index.insert ( { { { "A", "-TA" } }, 3 } );
-    generative_index.insert ( { { { "A", "#" } }, 4 } );
-    generative_index.insert ( { { { "T", "FB" } }, 5 } );
-    generative_index.insert ( { { { "B", "*FB" } }, 6 } );
-    generative_index.insert ( { { { "B", "/FB" } }, 7 } );
-    generative_index.insert ( { { { "B", "#" } }, 8 } );
-    generative_index.insert ( { { { "F", "(E)" } }, 9 } );
-    generative_index.insert ( { { { "F", "n" } }, 10 } );
+map< pair< string, string >, int > generative_index{};
+void                               initIndex () {
+    generative_index.insert ( { { "E", "TA" }, 1 } );
+    generative_index.insert ( { { "A", "+TA" }, 2 } );
+    generative_index.insert ( { { "A", "-TA" }, 3 } );
+    generative_index.insert ( { { "A", "#" }, 4 } );
+    generative_index.insert ( { { "T", "FB" }, 5 } );
+    generative_index.insert ( { { "B", "*FB" }, 6 } );
+    generative_index.insert ( { { "B", "/FB" }, 7 } );
+    generative_index.insert ( { { "B", "#" }, 8 } );
+    generative_index.insert ( { { "F", "(E)" }, 9 } );
+    generative_index.insert ( { { "F", "n" }, 10 } );
 }
 /*1 E->TA 2 A->+ TA 3 A->- TA 4 A-># 5 T->FB 6 B->* FB 7 B->/ FB 8 B-># 9 F->( E ) 10 F->num */
 
@@ -257,7 +257,7 @@ public:
 
                     string left = top_item;
                     string right = Y;
-                    int    index = generative_index.find ( { { left, right } } )->second;
+                    int    index = generative_index.find ( { left, right } )->second;
                     analyze_table.back ().push_back ( to_string ( index ) );
                 }
             } else {
