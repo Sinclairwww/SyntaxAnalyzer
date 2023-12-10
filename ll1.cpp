@@ -8,6 +8,21 @@
 using namespace std;
 typedef pair< string, vector< string > > Node;
 
+map< map< string, string >, int > generative_index{};
+void                              initIndex () {
+    generative_index.insert ( { { { "E", "TA" } }, 1 } );
+    generative_index.insert ( { { { "A", "+TA" } }, 2 } );
+    generative_index.insert ( { { { "A", "-TA" } }, 3 } );
+    generative_index.insert ( { { { "A", "#" } }, 4 } );
+    generative_index.insert ( { { { "T", "FB" } }, 5 } );
+    generative_index.insert ( { { { "B", "*FB" } }, 6 } );
+    generative_index.insert ( { { { "B", "/FB" } }, 7 } );
+    generative_index.insert ( { { { "B", "#" } }, 8 } );
+    generative_index.insert ( { { { "F", "(E)" } }, 9 } );
+    generative_index.insert ( { { { "F", "n" } }, 10 } );
+}
+/*1 E->TA 2 A->+ TA 3 A->- TA 4 A-># 5 T->FB 6 B->* FB 7 B->/ FB 8 B-># 9 F->( E ) 10 F->num */
+
 int isStartWith ( string str, string pattern ) { return str.find ( pattern ) == 0; }
 
 class Gramma_Info {
@@ -20,20 +35,20 @@ public:
     string                          S;
     Gramma_Info () {
         set_generative ( "E", { "TA" } );
-        set_generative ( "A", { "+TA", "-TA", "ε" } );
+        set_generative ( "A", { "+TA", "-TA", "#" } );
         set_generative ( "T", { "FB" } );
-        set_generative ( "B", { "*FB", "/FB", "ε" } );
-        set_generative ( "F", { "(E)", "num" } );
+        set_generative ( "B", { "*FB", "/FB", "#" } );
+        set_generative ( "F", { "(E)", "n" } );
 
         N_set = { "E", "A", "T", "B", "F" };
-        T_set = { "+", "-", "*", "/", "(", ")", "num", "$" };
+        T_set = { "+", "-", "*", "/", "(", ")", "n", "$" };
         S = "E";
 
-        set_first ( "E", { "(", "num" } );
-        set_first ( "A", { "+", "-", "ε" } );
-        set_first ( "T", { "(", "num" } );
-        set_first ( "B", { "*", "/", "ε" } );
-        set_first ( "F", { "(", "num" } );
+        set_first ( "E", { "(", "n" } );
+        set_first ( "A", { "+", "-", "#" } );
+        set_first ( "T", { "(", "n" } );
+        set_first ( "B", { "*", "/", "#" } );
+        set_first ( "F", { "(", "n" } );
 
         set_follow ( "E", { "$", ")" } );
         set_follow ( "A", { "$", ")" } );
@@ -80,15 +95,15 @@ public:
                     vector< string > first_set = G.first.find ( N )->second;    // 取出对应first集
                     // 将该非终结符的first集中的每一个终结符加入到预测分析表中
                     for ( auto it_first = first_set.begin (); it_first != first_set.end (); it_first++ ) {
-                        if ( *it_first != "ε" ) {
+                        if ( *it_first != "#" ) {
                             predict_table.table.find ( left )->second.insert ( pair< string, string > ( *it_first, right ) );
                         }
                     }
                     // 如果该非终结符的first集中包含ε，则将该非终结符的follow集中的每一个终结符加入到预测分析表中
-                    if ( find ( first_set.begin (), first_set.end (), "ε" ) != first_set.end () ) {
+                    if ( find ( first_set.begin (), first_set.end (), "#" ) != first_set.end () ) {
                         vector< string > follow_set = G.follow.find ( left )->second;
                         for ( auto follow_it = follow_set.begin (); follow_it != follow_set.end (); follow_it++ ) {
-                            if ( *follow_it != "ε" ) {
+                            if ( *follow_it != "#" ) {
                                 predict_table.table.find ( left )->second.insert ( pair< string, string > ( *follow_it, right ) );
                             }
                         }
@@ -96,20 +111,20 @@ public:
                 }    // 如果右部的第一个字符是终结符
                 else {
                     string alpha_first;
-                    if ( isStartWith ( right, "num" ) ) {
-                        alpha_first = "num";
-                    } else if ( isStartWith ( right, "ε" ) ) {
-                        alpha_first = "ε";
+                    if ( isStartWith ( right, "n" ) ) {
+                        alpha_first = "n";
+                    } else if ( isStartWith ( right, "#" ) ) {
+                        alpha_first = "#";
                     } else {
                         alpha_first = right[ 0 ];
                     }
-                    if ( alpha_first != "ε" ) {
+                    if ( alpha_first != "#" ) {
                         predict_table.table.find ( left )->second.insert ( pair< string, string > ( alpha_first, right ) );
                     } else {
                         // 如果该非终结符的first集中包含ε，则将该非终结符的follow集中的每一个终结符加入到预测分析表中
                         vector< string > follow_set = G.follow.find ( left )->second;
                         for ( auto follow_it = follow_set.begin (); follow_it != follow_set.end (); follow_it++ ) {
-                            if ( *follow_it != "ε" ) {
+                            if ( *follow_it != "#" ) {
                                 predict_table.table.find ( left )->second.insert ( pair< string, string > ( *follow_it, right ) );
                             }
                         }
@@ -146,7 +161,7 @@ public:
                 string output_str;
                 if ( iter2->second == "error" ) {
                     output_str = "error";
-                } else if ( iter2->second == "ε" ) {
+                } else if ( iter2->second == "#" ) {
                     output_str = iter->first + "-><epsilon>";
                 } else {
                     output_str = iter->first + "->" + iter2->second;
@@ -163,12 +178,10 @@ public:
 
 
     string generate_stack_str ( const vector< string >& stack ) {
-        string stack_str = "[\"";
+        string stack_str = "";
         for ( auto iter = stack.begin (); iter != stack.end (); iter++ ) {
-            stack_str += *iter + "\",\"";
+            stack_str += *iter;
         }
-        stack_str.erase ( stack_str.length () - 2, 2 );
-        stack_str += "]";
         return stack_str;
     }
 
@@ -197,16 +210,18 @@ public:
                 if ( isStartWith ( input_string.substr ( ip ), top_item ) ) {
                     ip += top_item.size ();
                     stack.pop_back ();
+                    analyze_table.back ().push_back ( "match" );
                 } else {
                     error ( "Except2 " + top_item );
+                    analyze_table.back ().push_back ( "error" );
                     return;
                 }
             }    // 如果栈顶元素是非终结符
             else if ( isInN_set ( top_item ) ) {
                 string input_string_first;
                 // 如果输入串中当前位置的内容是num,则将input_string_first设置为num
-                if ( input_string[ ip ] == 'n' && input_string[ ip + 1 ] == 'u' && input_string[ ip + 2 ] == 'm' ) {
-                    input_string_first = "num";
+                if ( input_string[ ip ] == 'n' ) {
+                    input_string_first = "n";
                 } else {    // 否则将input_string_first设置为输入串中当前位置的内容
                     input_string_first = input_string.substr ( ip, 1 );
                 }
@@ -214,6 +229,7 @@ public:
                 if ( predict_table.table.find ( top_item ) == predict_table.table.end ()
                      || predict_table.table.find ( top_item )->second.find ( input_string_first ) == predict_table.table.find ( top_item )->second.end () ) {
                     error ( "Except3 " + top_item );
+                    analyze_table.back ().push_back ( "error" );
                     return;
                 }
                 // 否则将栈顶元素弹出,并将对应的生成式的右部的每一个字符压入栈中
@@ -221,72 +237,72 @@ public:
                 // 如果生成式的右部是error,则报错
                 if ( Y == "error" ) {
                     error ( "Except4 " + top_item );
+                    analyze_table.back ().push_back ( "error" );
                     return;
                 }    // 否则将生成式的右部的每一个字符压入栈中
                 else {
                     stack.pop_back ();
-                    if ( Y != "ε" ) {
-                        for ( auto iter = Y.rbegin (); iter != Y.rend (); iter++ ) {
-                            string first;
-                            if ( *iter == 'm' && *( iter + 1 ) == 'u' && *( iter + 2 ) == 'n' ) {
-                                first = "num";
-                                iter += 2;
-                            } else {
-                                first = string ( 1, *iter );
-                            }
-                            stack.push_back ( first );
+
+                    for ( auto iter = Y.rbegin (); iter != Y.rend (); iter++ ) {
+                        string first;
+                        if ( *iter == 'm' && *( iter + 1 ) == 'u' && *( iter + 2 ) == 'n' ) {
+                            first = "n";
+                            iter += 2;
+                        } else {
+                            first = string ( 1, *iter );
                         }
-                        analyze_table.back ().push_back ( top_item + "->" + Y );
-                    } else {
-                        analyze_table.back ().push_back ( top_item + "-><epsilon>" );
+                        if ( first != "#" )
+                            stack.push_back ( first );
                     }
+
+                    string left = top_item;
+                    string right = Y;
+                    int    index = generative_index.find ( { { left, right } } )->second;
+                    analyze_table.back ().push_back ( to_string ( index ) );
                 }
             } else {
                 error ( "Except5 " + top_item );
+                analyze_table.back ().push_back ( "error" );
                 return;
             }
         }
         if ( input_string[ ip ] == '$' ) {
-            cout << "Accepted" << endl;
             vector< string > analyze_table_item;
             analyze_table.push_back ( analyze_table_item );
-            analyze_table.back ().push_back ( "[\"$\"]" );
             analyze_table.back ().push_back ( "$" );
+            analyze_table.back ().push_back ( "$" );
+            analyze_table.back ().push_back ( "accept" );
         } else {
             error ( "Except6 $" );
+            analyze_table.back ().push_back ( "error" );
         }
         return;
     }
 
     void print_analyze_table () {
-        cout << "vector< vector< string > >:" << endl;
         for ( auto iter = analyze_table.begin (); iter != analyze_table.end (); iter++ ) {
             vector< string > analyze_table_item = *iter;
             for ( auto iter2 = analyze_table_item.begin (); iter2 != analyze_table_item.end (); iter2++ ) {
                 cout << *iter2;
-                if ( iter2 == analyze_table_item.begin () ) {
-                    for ( int i = 0; i < 6 - iter2->size () / 8; i++ ) {
-                        cout << "\t";
-                    }
-                } else {
-                    for ( int i = 0; i < 4 - iter2->size () / 8; i++ ) {
-                        cout << "\t";
-                    }
+                if ( iter2 + 1 != analyze_table_item.end () ) {
+                    cout << "\t";
                 }
             }
             cout << endl;
         }
     }
 
-    void error ( string error_string ) { cout << error_string << endl; };
+    void error ( string error_string ){
+
+    };
 };
 
-// 将输入字符串中的所有连续的数字（包括小数）替换为字符串 "num"
+// 将输入字符串中的所有连续的数字（包括小数）替换为字符串 "n"
 string processString ( string inputString ) {
     string newString;
     for ( int i = 0; i < inputString.size (); i++ ) {
-        if ( isdigit ( inputString[ i ] ) || inputString[ i ] == '.' ) {
-            newString += "num";
+        if ( inputString[ i ] == 'n' ) {
+            newString += "n";
         } else {
             newString += inputString[ i ];
         }
@@ -295,7 +311,6 @@ string processString ( string inputString ) {
 }
 
 string input () {
-    cout << "Please input string:" << endl;
     string input_string;
     cin >> input_string;
     return input_string;
@@ -305,11 +320,28 @@ int main () {
     SyntaxAnalyzer analyser;
     Gramma_Info    G;
     analyser.create_predict_table ( G );
-    analyser.print_predict_table ();
+    // analyser.print_predict_table ();
 
     string input_string = processString ( input () );
+    initIndex ();
     analyser.predict_analyze ( input_string );
     analyser.print_analyze_table ();
 
     return 0;
 }
+
+/*
+$E	n+n$	1
+$AT	n+n$	5
+$ABF	n+n$	10
+$ABn	n+n$	match
+$AB	+n$	8
+$A	+n$	2
+$AT+	+n$	match
+$AT	n$	5
+$ABF	n$	10
+$ABn	n$	match
+$AB	$	8
+$A	$	4
+$	$	accept
+*/
