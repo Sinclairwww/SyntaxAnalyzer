@@ -204,3 +204,6 @@ int main () {
     analyzer.analyse ( str );
     return 0;
 }
+
+
+// 改读入文件
