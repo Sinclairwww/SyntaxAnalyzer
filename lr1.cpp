@@ -48,7 +48,7 @@ private:
 
 void SyntaxAnalyzer::loadTable ( string file_name ) {
     /*
-    state,),-,n,/,+,(,*,$,E,T,F,
+state,),-,n,/,+,(,*,$,E,T,F,
 I0,0,0,s5,0,0,s4,0,0,1,2,3,
 I1,0,s7,0,0,s6,0,0,acc,0,0,0,
 I2,0,r3,0,s9,r3,0,s8,r3,0,0,0,
@@ -102,7 +102,7 @@ I29,r7,r7,0,r7,r7,0,r7,0,0,0,0,
     }
     analyse_table    table;
     string           line;
-    vector< string > tokens = { ")", "-", "n", "/", "+", "(", "*", "$", "E", "T", "F" };
+    vector< string > tokens = { ")", "-", "n", "/", "+", "(", "*", "$", "E", "T", "F", "E'" };
     getline ( file, line );
     string word;
 
@@ -112,16 +112,14 @@ I29,r7,r7,0,r7,r7,0,r7,0,0,0,0,
         string state;
         for ( int i = 0; i < line.size (); i++ ) {
             if ( line[ i ] == ',' ) {
-                if ( count == 0 ) {
+                if ( count == 0 ) {    // state
                     table.insert ( make_pair ( word, map< string, string > () ) );
                     state = word;
-                    count++;
                 } else if ( word != string ( "0" ) ) {
                     table[ state ].insert ( make_pair ( tokens[ count - 1 ], word ) );
-                    count++;
-                } else {
-                    count++;
                 }
+                count++;
+
                 word.clear ();
             } else {
                 word += line[ i ];
@@ -140,20 +138,23 @@ void SyntaxAnalyzer::analyse ( string str ) {
     state_stack.push_back ( "I0" );
     str.push_back ( '$' );
     while ( true ) {
-        int    ipAdd = 0;
+        int    ipAdd = 1;
         string state = state_stack.back ();
         string a;
-        if ( startWith ( str.substr ( ip ), "n" ) ) {
-            a = "n";
-            ipAdd += 1;
-        } else {
-            a = str[ ip ];
-            ipAdd = 1;
-        }
+        // if ( startWith ( str.substr ( ip ), "n" ) ) {
+        //     a = "n";
+        //     ipAdd = 1;
+        // } else {
+        //     a = str[ ip ];
+        //     ipAdd = 1;
+        // }
+        a = str[ ip ];
+        // 看看有没有这个状态
         if ( _table.find ( state ) == _table.end () ) {
             cout << "Error: state " << state << " not found" << endl;
             return;
         }
+        // 看看该状态下有没有这个token
         if ( _table[ state ].find ( a ) == _table[ state ].end () ) {
             cout << "Error: Unexpected token " << a << " in state " << state << ", skip..." << endl;
             ip += ipAdd;
@@ -161,17 +162,39 @@ void SyntaxAnalyzer::analyse ( string str ) {
             return;
         }
         string next_state = _table[ state ][ a ];
+        // 移入
         if ( startWith ( next_state, "s" ) || startWith ( next_state, "S" ) ) {
             _printStack ( stack, state_stack, str.substr ( ip ), "shift" );
             stack.push_back ( a );
             state_stack.push_back ( "I" + next_state.substr ( 1 ) );
             ip += ipAdd;
-        } else if ( startWith ( next_state, "r" ) ) {
+        }    // 归约
+        else if ( startWith ( next_state, "r" ) ) {
+            /*
+            int counti = 0;
+            int r = stoi(next_state.substr(1));
+            _printStack(stack, state_stack, str.substr(ip), "Reduce " + _formula[r - 1].first + " -> " + _formula[r - 1].second);
+            for (int i = 0; i < _formula[r - 1].second.size(); i++)
+            {
+                if (_formula[r - 1].second[i] == 'm' && i > 1 && _formula[r - 1].second[i - 1] == 'u' && _formula[r - 1].second[i - 2] == 'n')
+                {
+                    counti -= 2;
+                }
+                counti++;
+            }
+            for (int i = 0; i < counti; i++)
+            {
+                stack.pop_back();
+                state_stack.pop_back();
+            }
+            stack.push_back(_formula[r - 1].first);
+            state_stack.push_back("I" + _table[state_stack.back()][_formula[r - 1].first]);
+            */
             int counti = 0;
             int r = stoi ( next_state.substr ( 1 ) );
-            int index = generative_index.find ( _formula[ r - 1 ] )->second;
+            int index = generative_index.find ( _formula[ r ] )->second;
             _printStack ( stack, state_stack, str.substr ( ip ), to_string ( index ) );
-            counti = _formula[ r - 1 ].second.size ();
+            counti = _formula[ r ].second.size ();
             for ( int i = 0; i < counti; i++ ) {
                 stack.pop_back ();
                 state_stack.pop_back ();
@@ -209,6 +232,7 @@ string process ( string str ) {
 int main () {
     init_index ();
     SyntaxAnalyzer analyzer;
+    analyzer.initFormula ();
     analyzer.loadTable ( "lr1.csv" );
     string str;
     cin >> str;
