@@ -43,96 +43,50 @@ public:
 private:
     analyse_table                    _table;
     vector< pair< string, string > > _formula;
-    void                             _printStack ( vector< string > stack, vector< string > state_stack, string str, string action ) { cout << action << endl; };
 };
 
 void SyntaxAnalyzer::loadTable ( string file_name ) {
-    /*
-state,),-,n,/,+,(,*,$,E,T,F,
-I0,0,0,s5,0,0,s4,0,0,1,2,3,
-I1,0,s7,0,0,s6,0,0,acc,0,0,0,
-I2,0,r3,0,s9,r3,0,s8,r3,0,0,0,
-I3,0,r6,0,r6,r6,0,r6,r6,0,0,0,
-I4,0,0,s14,0,0,s13,0,0,10,11,12,
-I5,0,r8,0,r8,r8,0,r8,r8,0,0,0,
-I6,0,0,s5,0,0,s4,0,0,0,15,3,
-I7,0,0,s5,0,0,s4,0,0,0,16,3,
-I8,0,0,s5,0,0,s4,0,0,0,0,17,
-I9,0,0,s5,0,0,s4,0,0,0,0,18,
-I10,s19,s21,0,0,s20,0,0,0,0,0,0,
-I11,r3,r3,0,s23,r3,0,s22,0,0,0,0,
-I12,r6,r6,0,r6,r6,0,r6,0,0,0,0,
-I13,0,0,s14,0,0,s13,0,0,24,11,12,
-I14,r8,r8,0,r8,r8,0,r8,0,0,0,0,
-I15,0,r1,0,s9,r1,0,s8,r1,0,0,0,
-I16,0,r2,0,s9,r2,0,s8,r2,0,0,0,
-I17,0,r4,0,r4,r4,0,r4,r4,0,0,0,
-I18,0,r5,0,r5,r5,0,r5,r5,0,0,0,
-I19,0,r7,0,r7,r7,0,r7,r7,0,0,0,
-I20,0,0,s14,0,0,s13,0,0,0,25,12,
-I21,0,0,s14,0,0,s13,0,0,0,26,12,
-I22,0,0,s14,0,0,s13,0,0,0,0,27,
-I23,0,0,s14,0,0,s13,0,0,0,0,28,
-I24,s29,s21,0,0,s20,0,0,0,0,0,0,
-I25,r1,r1,0,s23,r1,0,s22,0,0,0,0,
-I26,r2,r2,0,s23,r2,0,s22,0,0,0,0,
-I27,r4,r4,0,r4,r4,0,r4,0,0,0,0,
-I28,r5,r5,0,r5,r5,0,r5,0,0,0,0,
-I29,r7,r7,0,r7,r7,0,r7,0,0,0,0,
-    */
-    vector< vector< string > > input = { { "0", "0", "s5", "0", "0", "s4", "0", "0", "1", "2", "3" },      { "0", "s7", "0", "0", "s6", "0", "0", "acc", "0", "0", "0" },
-                                         { "0", "r3", "0", "s9", "r3", "0", "s8", "r3", "0", "0", "0" },   { "0", "r6", "0", "r6", "r6", "0", "r6", "r6", "0", "0", "0" },
-                                         { "0", "0", "s14", "0", "0", "s13", "0", "0", "10", "11", "12" }, { "0", "r8", "0", "r8", "r8", "0", "r8", "r8", "0", "0", "0" },
-                                         { "0", "0", "s5", "0", "0", "s4", "0", "0", "0", "15", "3" },     { "0", "0", "s5", "0", "0", "s4", "0", "0", "0", "16", "3" },
-                                         { "0", "0", "s5", "0", "0", "s4", "0", "0", "0", "0", "17" },     { "0", "0", "s5", "0", "0", "s4", "0", "0", "0", "0", "18" },
-                                         { "s19", "s21", "0", "0", "s20", "0", "0", "0", "0", "0", "0" },  { "r3", "r3", "0", "s23", "r3", "0", "s22", "0", "0", "0", "0" },
-                                         { "r6", "r6", "0", "r6", "r6", "0", "r6", "0", "0", "0", "0" },   { "0", "0", "s14", "0", "0", "s13", "0", "0", "24", "11", "12" },
-                                         { "r8", "r8", "0", "r8", "r8", "0", "r8", "0", "0", "0", "0" },   { "0", "r1", "0", "s9", "r1", "0", "s8", "r1", "0", "0", "0" },
-                                         { "0", "r2", "0", "s9", "r2", "0", "s8", "r2", "0", "0", "0" },   { "0", "r4", "0", "r4", "r4", "0", "r4", "r4", "0", "0", "0" },
-                                         { "0", "r5", "0", "r5", "r5", "0", "r5", "r5", "0", "0", "0" },   { "0", "r7", "0", "r7", "r7", "0", "r7", "r7", "0", "0", "0" },
-                                         { "0", "0", "s14", "0", "0", "s13", "0", "0", "0", "25", "12" },  { "0", "0", "s14", "0", "0", "s13", "0", "0", "0", "26", "12" },
-                                         { "0", "0", "s14", "0", "0", "s13", "0", "0", "0", "0", "27" },   { "0", "0", "s14", "0", "0", "s13", "0", "0", "0", "0", "28" },
-                                         { "s29", "s21", "0", "0", "s20", "0", "0", "0", "0", "0", "0" },  { "r1", "r1", "0", "s23", "r1", "0", "s22", "0", "0", "0", "0" },
-                                         { "r2", "r2", "0", "s23", "r2", "0", "s22", "0", "0", "0", "0" }, { "r4", "r4", "0", "r4", "r4", "0", "r4", "0", "0", "0", "0" },
-                                         { "r5", "r5", "0", "r5", "r5", "0", "r5", "0", "0", "0", "0" },   { "r7", "r7", "0", "r7", "r7", "0", "r7", "0", "0", "0", "0" } };
-    ifstream                   file ( file_name );
-    if ( !file.is_open () ) {
-        cout << "Error: file " << file_name << " not found" << endl;
-        return;
-    }
+    vector< vector< string > > input = { { "0", "0", "s5", "0", "0", "s4", "0", "0", "1", "2", "3", "30" }, { "0", "s7", "0", "0", "s6", "0", "0", "acc", "0", "0", "0" },
+                                         { "0", "r3", "0", "s9", "r3", "0", "s8", "r3", "0", "0", "0" },    { "0", "r6", "0", "r6", "r6", "0", "r6", "r6", "0", "0", "0" },
+                                         { "0", "0", "s14", "0", "0", "s13", "0", "0", "10", "11", "12" },  { "0", "r8", "0", "r8", "r8", "0", "r8", "r8", "0", "0", "0" },
+                                         { "0", "0", "s5", "0", "0", "s4", "0", "0", "0", "15", "3" },      { "0", "0", "s5", "0", "0", "s4", "0", "0", "0", "16", "3" },
+                                         { "0", "0", "s5", "0", "0", "s4", "0", "0", "0", "0", "17" },      { "0", "0", "s5", "0", "0", "s4", "0", "0", "0", "0", "18" },
+                                         { "s19", "s21", "0", "0", "s20", "0", "0", "0", "0", "0", "0" },   { "r3", "r3", "0", "s23", "r3", "0", "s22", "0", "0", "0", "0" },
+                                         { "r6", "r6", "0", "r6", "r6", "0", "r6", "0", "0", "0", "0" },    { "0", "0", "s14", "0", "0", "s13", "0", "0", "24", "11", "12" },
+                                         { "r8", "r8", "0", "r8", "r8", "0", "r8", "0", "0", "0", "0" },    { "0", "r1", "0", "s9", "r1", "0", "s8", "r1", "0", "0", "0" },
+                                         { "0", "r2", "0", "s9", "r2", "0", "s8", "r2", "0", "0", "0" },    { "0", "r4", "0", "r4", "r4", "0", "r4", "r4", "0", "0", "0" },
+                                         { "0", "r5", "0", "r5", "r5", "0", "r5", "r5", "0", "0", "0" },    { "0", "r7", "0", "r7", "r7", "0", "r7", "r7", "0", "0", "0" },
+                                         { "0", "0", "s14", "0", "0", "s13", "0", "0", "0", "25", "12" },   { "0", "0", "s14", "0", "0", "s13", "0", "0", "0", "26", "12" },
+                                         { "0", "0", "s14", "0", "0", "s13", "0", "0", "0", "0", "27" },    { "0", "0", "s14", "0", "0", "s13", "0", "0", "0", "0", "28" },
+                                         { "s29", "s21", "0", "0", "s20", "0", "0", "0", "0", "0", "0" },   { "r1", "r1", "0", "s23", "r1", "0", "s22", "0", "0", "0", "0" },
+                                         { "r2", "r2", "0", "s23", "r2", "0", "s22", "0", "0", "0", "0" },  { "r4", "r4", "0", "r4", "r4", "0", "r4", "0", "0", "0", "0" },
+                                         { "r5", "r5", "0", "r5", "r5", "0", "r5", "0", "0", "0", "0" },    { "r7", "r7", "0", "r7", "r7", "0", "r7", "0", "0", "0", "0" },
+                                         { "0", "0", "0", "0", "0", "0", "0", "acc", "0", "0", "0" } };
+
     analyse_table    table;
     string           line;
     vector< string > tokens = { ")", "-", "n", "/", "+", "(", "*", "$", "E", "T", "F", "E'" };
-    getline ( file, line );
-    string word;
 
-    while ( getline ( file, line ) ) {
-        string word;
-        int    count = 0;
+    for ( int i = 0; i < input.size (); i++ ) {
+        int    col = 0;
         string state;
-        for ( int i = 0; i < line.size (); i++ ) {
-            if ( line[ i ] == ',' ) {
-                if ( count == 0 ) {    // state
-                    table.insert ( make_pair ( word, map< string, string > () ) );
-                    state = word;
-                } else if ( word != string ( "0" ) ) {
-                    table[ state ].insert ( make_pair ( tokens[ count - 1 ], word ) );
-                }
-                count++;
-
-                word.clear ();
-            } else {
-                word += line[ i ];
+        for ( const auto& word : input[ i ] ) {
+            if ( col == 0 ) {    // state
+                state = "I" + to_string ( i );
+                table.insert ( make_pair ( state, map< string, string > () ) );
+            } else if ( word != "0" ) {
+                table[ state ].insert ( make_pair ( tokens[ col ], word ) );
             }
+            col++;
         }
     }
-    file.close ();
     _table = table;
 }
 
 
 void SyntaxAnalyzer::analyse ( string str ) {
     int              ip = 0;
+    int              r = 0;
     vector< string > state_stack;
     vector< string > stack;
     state_stack.push_back ( "I0" );
@@ -141,17 +95,11 @@ void SyntaxAnalyzer::analyse ( string str ) {
         int    ipAdd = 1;
         string state = state_stack.back ();
         string a;
-        // if ( startWith ( str.substr ( ip ), "n" ) ) {
-        //     a = "n";
-        //     ipAdd = 1;
-        // } else {
-        //     a = str[ ip ];
-        //     ipAdd = 1;
-        // }
         a = str[ ip ];
         // 看看有没有这个状态
         if ( _table.find ( state ) == _table.end () ) {
             cout << "Error: state " << state << " not found" << endl;
+            cout << state_stack.back () << "\t" << _formula[ r - 1 ].first << "\t" << state << endl;
             return;
         }
         // 看看该状态下有没有这个token
@@ -164,45 +112,25 @@ void SyntaxAnalyzer::analyse ( string str ) {
         string next_state = _table[ state ][ a ];
         // 移入
         if ( startWith ( next_state, "s" ) || startWith ( next_state, "S" ) ) {
-            _printStack ( stack, state_stack, str.substr ( ip ), "shift" );
+            cout << "shift" << endl;
             stack.push_back ( a );
             state_stack.push_back ( "I" + next_state.substr ( 1 ) );
             ip += ipAdd;
         }    // 归约
         else if ( startWith ( next_state, "r" ) ) {
-            /*
             int counti = 0;
-            int r = stoi(next_state.substr(1));
-            _printStack(stack, state_stack, str.substr(ip), "Reduce " + _formula[r - 1].first + " -> " + _formula[r - 1].second);
-            for (int i = 0; i < _formula[r - 1].second.size(); i++)
-            {
-                if (_formula[r - 1].second[i] == 'm' && i > 1 && _formula[r - 1].second[i - 1] == 'u' && _formula[r - 1].second[i - 2] == 'n')
-                {
-                    counti -= 2;
-                }
-                counti++;
-            }
-            for (int i = 0; i < counti; i++)
-            {
-                stack.pop_back();
-                state_stack.pop_back();
-            }
-            stack.push_back(_formula[r - 1].first);
-            state_stack.push_back("I" + _table[state_stack.back()][_formula[r - 1].first]);
-            */
-            int counti = 0;
-            int r = stoi ( next_state.substr ( 1 ) );
+            r = stoi ( next_state.substr ( 1 ) );
             int index = generative_index.find ( _formula[ r ] )->second;
-            _printStack ( stack, state_stack, str.substr ( ip ), to_string ( index ) );
+            cout << to_string ( index ) << endl;
             counti = _formula[ r ].second.size ();
             for ( int i = 0; i < counti; i++ ) {
                 stack.pop_back ();
                 state_stack.pop_back ();
             }
-            stack.push_back ( _formula[ r - 1 ].first );
-            state_stack.push_back ( "I" + _table[ state_stack.back () ][ _formula[ r - 1 ].first ] );
+            stack.push_back ( _formula[ r ].first );
+            state_stack.push_back ( "I" + _table[ state_stack.back () ][ _formula[ r ].first ] );
         } else if ( next_state == string ( "acc" ) ) {
-            _printStack ( stack, state_stack, str.substr ( ip ), "accept" );
+            cout << "accept" << endl;
             return;
         } else {
             cout << "Error: Unexpected state " << next_state << endl;
@@ -242,4 +170,4 @@ int main () {
 }
 
 
-// 改csv的读入
+// 基本改完了,错误处理还需再完善
