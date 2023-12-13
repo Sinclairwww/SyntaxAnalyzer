@@ -45,8 +45,13 @@ private:
     vector< pair< string, string > > _formula;
 };
 
+void Error () {
+    cout << "error" << endl;
+    exit ( 0 );
+}
+
 void SyntaxAnalyzer::loadTable () {
-    vector< vector< string > > input = { { "0", "0", "s5", "0", "0", "s4", "0", "0", "1", "2", "3", "30" }, { "0", "s7", "0", "0", "s6", "0", "0", "0", "0", "0", "0" },
+    vector< vector< string > > input = { { "0", "0", "s5", "0", "0", "s4", "0", "0", "1", "2", "3", "30" }, { "0", "s7", "0", "0", "s6", "0", "0", "acc", "0", "0", "0" },
                                          { "0", "r3", "0", "s9", "r3", "0", "s8", "r3", "0", "0", "0" },    { "0", "r6", "0", "r6", "r6", "0", "r6", "r6", "0", "0", "0" },
                                          { "0", "0", "s14", "0", "0", "s13", "0", "0", "10", "11", "12" },  { "0", "r8", "0", "r8", "r8", "0", "r8", "r8", "0", "0", "0" },
                                          { "0", "0", "s5", "0", "0", "s4", "0", "0", "0", "15", "3" },      { "0", "0", "s5", "0", "0", "s4", "0", "0", "0", "16", "3" },
@@ -99,16 +104,18 @@ void SyntaxAnalyzer::analyse ( string str ) {
         a = str[ ip ];
         // 看看有没有这个状态
         if ( _table.find ( state ) == _table.end () ) {
-            cout << "Error: state " << state << " not found" << endl;
-            cout << state_stack.back () << "\t" << _formula[ r - 1 ].first << "\t" << state << endl;
-            return;
+            Error ();
+            // cout << "Error: state " << state << " not found" << endl;
+            // cout << state_stack.back () << "\t" << _formula[ r - 1 ].first << "\t" << state << endl;
+            // return;
         }
         // 看看该状态下有没有这个token
         if ( _table[ state ].find ( a ) == _table[ state ].end () ) {
-            cout << "Error: Unexpected token " << a << " in state " << state << ", skip..." << endl;
-            ip += ipAdd;
-            continue;
-            return;
+            Error ();
+            // cout << "Error: Unexpected token " << a << " in state " << state << ", skip..." << endl;
+            // ip += ipAdd;
+            // continue;
+            // return;
         }
         string next_state = _table[ state ][ a ];
         // 移入
@@ -134,8 +141,9 @@ void SyntaxAnalyzer::analyse ( string str ) {
             cout << "accept" << endl;
             return;
         } else {
-            cout << "Error: Unexpected state " << next_state << endl;
-            return;
+            Error ();
+            // cout << "Error: Unexpected state " << next_state << endl;
+            // return;
         }
     }
 }
@@ -165,7 +173,7 @@ int main () {
     analyzer.loadTable ();
     string str;
     cin >> str;
-    // str = "n+n";
+    // str = "n-n*n";
     str = process ( str );
     analyzer.analyse ( str );
     return 0;
