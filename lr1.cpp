@@ -35,7 +35,7 @@ typedef map< string, map< string, string > > analyse_table;
 
 class SyntaxAnalyzer {
 public:
-    void loadTable ( string file_name );
+    void loadTable ();
     void initFormula () { _formula = { { "E'", "E" }, { "E", "E+T" }, { "E", "E-T" }, { "E", "T" }, { "T", "T*F" }, { "T", "T/F" }, { "T", "F" }, { "F", "(E)" }, { "F", "n" } }; }
     void analyse ( string str );
     int  startWith ( string str, string start ) { return str.find ( start ) == 0; }
@@ -45,8 +45,8 @@ private:
     vector< pair< string, string > > _formula;
 };
 
-void SyntaxAnalyzer::loadTable ( string file_name ) {
-    vector< vector< string > > input = { { "0", "0", "s5", "0", "0", "s4", "0", "0", "1", "2", "3", "30" }, { "0", "s7", "0", "0", "s6", "0", "0", "acc", "0", "0", "0" },
+void SyntaxAnalyzer::loadTable () {
+    vector< vector< string > > input = { { "0", "0", "s5", "0", "0", "s4", "0", "0", "1", "2", "3", "30" }, { "0", "s7", "0", "0", "s6", "0", "0", "0", "0", "0", "0" },
                                          { "0", "r3", "0", "s9", "r3", "0", "s8", "r3", "0", "0", "0" },    { "0", "r6", "0", "r6", "r6", "0", "r6", "r6", "0", "0", "0" },
                                          { "0", "0", "s14", "0", "0", "s13", "0", "0", "10", "11", "12" },  { "0", "r8", "0", "r8", "r8", "0", "r8", "r8", "0", "0", "0" },
                                          { "0", "0", "s5", "0", "0", "s4", "0", "0", "0", "15", "3" },      { "0", "0", "s5", "0", "0", "s4", "0", "0", "0", "16", "3" },
@@ -74,7 +74,8 @@ void SyntaxAnalyzer::loadTable ( string file_name ) {
             if ( col == 0 ) {    // state
                 state = "I" + to_string ( i );
                 table.insert ( make_pair ( state, map< string, string > () ) );
-            } else if ( word != "0" ) {
+            }
+            if ( word != "0" ) {
                 table[ state ].insert ( make_pair ( tokens[ col ], word ) );
             }
             col++;
@@ -161,9 +162,10 @@ int main () {
     init_index ();
     SyntaxAnalyzer analyzer;
     analyzer.initFormula ();
-    analyzer.loadTable ( "lr1.csv" );
+    analyzer.loadTable ();
     string str;
     cin >> str;
+    // str = "n+n";
     str = process ( str );
     analyzer.analyse ( str );
     return 0;
